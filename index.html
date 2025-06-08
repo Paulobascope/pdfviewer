@@ -209,6 +209,24 @@
             font-size: 13px;
         }
 
+        /* Voice Loading Indicator */
+        .voice-loading {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .voice-loading .spinner-small {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border-color);
+            border-top: 2px solid var(--button-bg);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
         /* Floating Controls for Fullscreen */
         .floating-controls {
             position: fixed;
@@ -573,6 +591,9 @@
             font-size: 12px;
             z-index: 1005;
             display: none;
+            max-width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
         }
 
         .debug-info.show {
@@ -1027,6 +1048,9 @@
                         <button class="btn btn-secondary" onclick="readSelectedText()" id="readSelectionBtn" style="display: none;">
                             📖 Ler Seleção
                         </button>
+                        <button class="btn btn-secondary btn-small" onclick="forceLoadVoices()" id="loadVoicesBtn">
+                            🔄 Recarregar Vozes
+                        </button>
                     </div>
                 </div>
 
@@ -1036,6 +1060,10 @@
                         <select id="voiceSelect" class="select" onchange="changeVoice()">
                             <option value="">Carregando vozes...</option>
                         </select>
+                        <div class="voice-loading hidden" id="voiceLoading">
+                            <div class="spinner-small"></div>
+                            <span>Carregando...</span>
+                        </div>
                     </div>
 
                     <div class="slider-container">
@@ -1089,7 +1117,9 @@
         <div class="control-group">
             <label for="quickVoiceSelect">Voz</label>
             <select id="quickVoiceSelect" class="select" onchange="changeVoiceFromQuick()" style="width: 100%;">
+                <option value="">Carregando vozes...</option>
             </select>
+            <button class="btn btn-secondary" onclick="forceLoadVoices()" style="margin-top: 5px;">🔄 Recarregar Vozes</button>
         </div>
 
         <div class="control-group">
@@ -1111,6 +1141,7 @@
 
         <div class="control-group">
             <button class="btn btn-secondary" onclick="toggleDebugInfo()">🐛 Debug Info</button>
+            <button class="btn btn-secondary" onclick="testSpeech()">🎤 Testar Voz</button>
         </div>
     </div>
 
@@ -1153,6 +1184,8 @@
         let speechSynthesisReady = false;
         let userInteracted = false;
         let debugMode = false;
+        let voiceLoadAttempts = 0;
+        let maxVoiceLoadAttempts = 10;
 
         // Configurações TTS
         let ttsSettings = {
@@ -1192,6 +1225,8 @@
         const quickPanel = document.getElementById('quickPanel');
         const floatingPlayBtn = document.getElementById('floatingPlayBtn');
         const debugInfo = document.getElementById('debugInfo');
+        const voiceLoading = document.getElementById('voiceLoading');
+        const loadVoicesBtn = document.getElementById('loadVoicesBtn');
 
         // Quick panel elements
         const quickFontSize = document.getElementById('quickFontSize');
@@ -1209,12 +1244,14 @@
             if (!debugMode) return;
             
             const info = {
+                userAgent: navigator.userAgent.substring(0, 50) + '...',
                 isFullscreen: isFullscreenMode,
                 isReading: isReading,
                 isPaused: isPaused,
                 speechSynthesisReady: speechSynthesisReady,
                 userInteracted: userInteracted,
                 voicesCount: availableVoices.length,
+                voiceLoadAttempts: voiceLoadAttempts,
                 currentVoice: ttsSettings.voice,
                 speechSynthesisState: {
                     speaking: speechSynthesis.speaking,
@@ -1222,11 +1259,13 @@
                     paused: speechSynthesis.paused
                 },
                 extractedTextLength: extractedText.length,
-                selectedTextLength: selectedText.length
+                selectedTextLength: selectedText.length,
+                speechSynthesisSupported: 'speechSynthesis' in window,
+                voicesChangedFired: voiceLoadAttempts > 0
             };
             
             debugInfo.innerHTML = Object.entries(info)
-                .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+                .map(([key, value]) => `<strong>${key}:</strong> ${JSON.stringify(value)}`)
                 .join('<br>');
         }
 
@@ -1245,12 +1284,17 @@
                 userInteracted = true;
                 updateDebugInfo();
                 console.log('User interaction detected');
+                
+                // Tentar carregar vozes após primeira interação
+                setTimeout(() => {
+                    forceLoadVoices();
+                }, 100);
             }
         }
 
         // Event listeners para detectar interação
         ['click', 'touchstart', 'keydown'].forEach(event => {
-            document.addEventListener(event, markUserInteraction, { once: true });
+            document.addEventListener(event, markUserInteraction, { once: false });
         });
 
         // Event listeners
@@ -1295,44 +1339,72 @@
             }
         }
 
-        // Carregar vozes com retry
+        // Função melhorada para carregar vozes
         function loadVoices() {
+            voiceLoadAttempts++;
+            console.log(`Loading voices attempt ${voiceLoadAttempts}`);
+            
             const voices = speechSynthesis.getVoices();
+            console.log(`Found ${voices.length} voices`);
             
             if (voices.length > 0) {
                 availableVoices = voices;
                 speechSynthesisReady = true;
+                voiceLoading.classList.add('hidden');
+                
                 populateVoiceSelect();
                 populateQuickVoiceSelect();
                 
                 // Selecionar voz em português por padrão
                 if (!ttsSettings.voice) {
                     const portugueseVoice = availableVoices.find(voice => 
-                        voice.lang.includes('pt') || voice.lang.includes('PT')
+                        voice.lang.includes('pt') || voice.lang.includes('PT') ||
+                        voice.name.toLowerCase().includes('portuguese') ||
+                        voice.name.toLowerCase().includes('brasil')
                     );
                     
                     if (portugueseVoice) {
                         ttsSettings.voice = portugueseVoice.name;
                         voiceSelect.value = portugueseVoice.name;
                         quickVoiceSelect.value = portugueseVoice.name;
+                        console.log('Selected Portuguese voice:', portugueseVoice.name);
                     } else if (availableVoices.length > 0) {
                         // Fallback para primeira voz disponível
                         ttsSettings.voice = availableVoices[0].name;
                         voiceSelect.value = availableVoices[0].name;
                         quickVoiceSelect.value = availableVoices[0].name;
+                        console.log('Selected fallback voice:', availableVoices[0].name);
                     }
                 }
                 
                 updateDebugInfo();
-                console.log(`Loaded ${voices.length} voices, ready: ${speechSynthesisReady}`);
+                console.log(`Successfully loaded ${voices.length} voices`);
+                
+                // Mostrar sucesso
+                showSuccess(`${voices.length} vozes carregadas com sucesso!`);
+                
+            } else if (voiceLoadAttempts < maxVoiceLoadAttempts) {
+                // Retry com delay progressivo
+                const delay = Math.min(voiceLoadAttempts * 200, 2000);
+                console.log(`No voices found, retrying in ${delay}ms`);
+                setTimeout(loadVoices, delay);
             } else {
-                // Retry after a short delay
-                setTimeout(loadVoices, 100);
+                console.error('Failed to load voices after maximum attempts');
+                voiceLoading.classList.add('hidden');
+                showError('Não foi possível carregar as vozes. Verifique se seu navegador suporta síntese de voz.');
+                
+                // Adicionar opção manual
+                populateVoiceSelectWithDefault();
             }
         }
 
         function populateVoiceSelect() {
             voiceSelect.innerHTML = '';
+            if (availableVoices.length === 0) {
+                voiceSelect.innerHTML = '<option value="">Nenhuma voz disponível</option>';
+                return;
+            }
+            
             availableVoices.forEach(voice => {
                 const option = document.createElement('option');
                 option.value = voice.name;
@@ -1343,6 +1415,11 @@
 
         function populateQuickVoiceSelect() {
             quickVoiceSelect.innerHTML = '';
+            if (availableVoices.length === 0) {
+                quickVoiceSelect.innerHTML = '<option value="">Nenhuma voz disponível</option>';
+                return;
+            }
+            
             availableVoices.forEach(voice => {
                 const option = document.createElement('option');
                 option.value = voice.name;
@@ -1351,16 +1428,110 @@
             });
         }
 
+        function populateVoiceSelectWithDefault() {
+            voiceSelect.innerHTML = '<option value="">Voz padrão do sistema</option>';
+            quickVoiceSelect.innerHTML = '<option value="">Voz padrão do sistema</option>';
+            ttsSettings.voice = '';
+        }
+
+        // Função para forçar carregamento de vozes
+        function forceLoadVoices() {
+            console.log('Force loading voices...');
+            voiceLoading.classList.remove('hidden');
+            voiceLoadAttempts = 0;
+            speechSynthesisReady = false;
+            availableVoices = [];
+            
+            // Múltiplas estratégias para carregar vozes
+            
+            // Estratégia 1: Cancelar e tentar novamente
+            speechSynthesis.cancel();
+            
+            // Estratégia 2: Criar utterance vazia para forçar carregamento
+            const testUtterance = new SpeechSynthesisUtterance('');
+            testUtterance.volume = 0;
+            testUtterance.rate = 10; // Muito rápido para terminar logo
+            speechSynthesis.speak(testUtterance);
+            
+            setTimeout(() => {
+                speechSynthesis.cancel();
+                loadVoices();
+            }, 100);
+            
+            // Estratégia 3: Tentar após delay
+            setTimeout(() => {
+                if (!speechSynthesisReady) {
+                    loadVoices();
+                }
+            }, 500);
+            
+            // Estratégia 4: Tentar após delay maior
+            setTimeout(() => {
+                if (!speechSynthesisReady) {
+                    loadVoices();
+                }
+            }, 1500);
+        }
+
+        // Função para testar voz
+        function testSpeech() {
+            markUserInteraction();
+            
+            if (!speechSynthesisReady && availableVoices.length === 0) {
+                showError('Nenhuma voz disponível. Tente recarregar as vozes primeiro.');
+                return;
+            }
+            
+            const testText = 'Teste de síntese de voz. Se você está ouvindo isso, a voz está funcionando corretamente.';
+            
+            const utterance = new SpeechSynthesisUtterance(testText);
+            
+            if (ttsSettings.voice && availableVoices.length > 0) {
+                const selectedVoice = availableVoices.find(voice => voice.name === ttsSettings.voice);
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                }
+            }
+            
+            utterance.rate = ttsSettings.rate;
+            utterance.volume = ttsSettings.volume;
+            
+            utterance.onstart = () => {
+                showSuccess('Teste de voz iniciado!');
+            };
+            
+            utterance.onend = () => {
+                showSuccess('Teste de voz concluído!');
+            };
+            
+            utterance.onerror = (event) => {
+                showError(`Erro no teste de voz: ${event.error}`);
+            };
+            
+            speechSynthesis.speak(utterance);
+        }
+
         // Carregar vozes quando disponíveis
         speechSynthesis.addEventListener('voiceschanged', loadVoices);
         
         // Tentar carregar vozes imediatamente
-        loadVoices();
+        setTimeout(loadVoices, 100);
 
         // Retry loading voices after page load
         window.addEventListener('load', () => {
-            setTimeout(loadVoices, 500);
+            setTimeout(() => {
+                if (!speechSynthesisReady) {
+                    forceLoadVoices();
+                }
+            }, 1000);
         });
+
+        // Tentar carregar vozes periodicamente se não conseguiu
+        setInterval(() => {
+            if (!speechSynthesisReady && voiceLoadAttempts < maxVoiceLoadAttempts) {
+                loadVoices();
+            }
+        }, 3000);
 
         function handleFileSelect(event) {
             markUserInteraction();
@@ -1407,6 +1578,11 @@
                 ttsToggle.style.display = 'block';
                 updateStatusIndicator('stopped');
                 updateDebugInfo();
+                
+                // Tentar carregar vozes se ainda não carregou
+                if (!speechSynthesisReady) {
+                    forceLoadVoices();
+                }
             } catch (error) {
                 console.error('Erro ao carregar PDF:', error);
                 showError('Erro ao carregar o arquivo PDF. Verifique se o arquivo não está corrompido.');
@@ -1578,22 +1754,18 @@
 
         function ensureSpeechSynthesisReady() {
             return new Promise((resolve) => {
-                if (speechSynthesisReady && availableVoices.length > 0) {
+                if ((speechSynthesisReady && availableVoices.length > 0) || availableVoices.length === 0) {
                     resolve(true);
                     return;
                 }
                 
                 // Tentar carregar vozes novamente
-                loadVoices();
+                forceLoadVoices();
                 
                 // Aguardar um pouco e tentar novamente
                 setTimeout(() => {
-                    if (speechSynthesisReady && availableVoices.length > 0) {
-                        resolve(true);
-                    } else {
-                        resolve(false);
-                    }
-                }, 500);
+                    resolve(true); // Permitir mesmo sem vozes específicas
+                }, 1000);
             });
         }
 
@@ -1617,11 +1789,7 @@
             }
 
             // Garantir que o speech synthesis está pronto
-            const ready = await ensureSpeechSynthesisReady();
-            if (!ready) {
-                showError('Sistema de voz não está pronto. Tente novamente em alguns segundos.');
-                return;
-            }
+            await ensureSpeechSynthesisReady();
 
             // Parar qualquer reprodução anterior
             stopReading();
@@ -1629,13 +1797,13 @@
             try {
                 currentUtterance = new SpeechSynthesisUtterance(textToRead);
                 
-                // Configurar voz
-                const selectedVoice = availableVoices.find(voice => voice.name === ttsSettings.voice);
-                if (selectedVoice) {
-                    currentUtterance.voice = selectedVoice;
-                    console.log('Using voice:', selectedVoice.name);
-                } else {
-                    console.log('Voice not found, using default');
+                // Configurar voz se disponível
+                if (ttsSettings.voice && availableVoices.length > 0) {
+                    const selectedVoice = availableVoices.find(voice => voice.name === ttsSettings.voice);
+                    if (selectedVoice) {
+                        currentUtterance.voice = selectedVoice;
+                        console.log('Using voice:', selectedVoice.name);
+                    }
                 }
 
                 currentUtterance.rate = ttsSettings.rate;
@@ -1693,7 +1861,7 @@
                 setTimeout(() => {
                     if (!speechSynthesis.speaking && !speechSynthesis.pending) {
                         console.error('Speech synthesis failed to start');
-                        showError('Falha ao iniciar a síntese de voz. Tente novamente.');
+                        showError('Falha ao iniciar a síntese de voz. Tente recarregar as vozes.');
                         isReading = false;
                         updatePlayPauseButton();
                         updateStatusIndicator('stopped');
@@ -1941,6 +2109,23 @@
             }, 5000);
         }
 
+        function showSuccess(message) {
+            const existingSuccess = document.querySelector('.success-message');
+            if (existingSuccess) {
+                existingSuccess.remove();
+            }
+
+            const successDiv = document.createElement('div');
+            successDiv.className = 'error-message';
+            successDiv.style.background = 'var(--success-bg)';
+            successDiv.textContent = message;
+            document.body.appendChild(successDiv);
+
+            setTimeout(() => {
+                successDiv.remove();
+            }, 3000);
+        }
+
         // Remover classe dragover quando sair da área
         uploadArea.addEventListener('dragleave', (event) => {
             if (!uploadArea.contains(event.relatedTarget)) {
@@ -1979,25 +2164,6 @@
         // Show controls on mouse movement in fullscreen
         document.addEventListener('mousemove', showFloatingControls);
         document.addEventListener('touchstart', showFloatingControls);
-
-        // Forçar carregamento de vozes em dispositivos móveis
-        function forceMobileVoiceLoad() {
-            if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-                // Criar uma utterance vazia para forçar o carregamento das vozes
-                const testUtterance = new SpeechSynthesisUtterance('');
-                testUtterance.volume = 0;
-                speechSynthesis.speak(testUtterance);
-                speechSynthesis.cancel();
-                
-                setTimeout(() => {
-                    loadVoices();
-                }, 100);
-            }
-        }
-
-        // Executar após interação do usuário
-        document.addEventListener('click', forceMobileVoiceLoad, { once: true });
-        document.addEventListener('touchstart', forceMobileVoiceLoad, { once: true });
 
         // Verificação periódica do estado do speech synthesis
         setInterval(() => {
