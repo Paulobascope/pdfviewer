@@ -25,6 +25,7 @@
             --error-bg: #ef4444;
             --warning-bg: #f59e0b;
             --selection-bg: rgba(59, 130, 246, 0.3);
+            --overlay-bg: rgba(0, 0, 0, 0.8);
         }
 
         [data-theme="dark"] {
@@ -43,6 +44,7 @@
             --reader-bg: #1e293b;
             --reader-text: #e2e8f0;
             --selection-bg: rgba(59, 130, 246, 0.4);
+            --overlay-bg: rgba(0, 0, 0, 0.9);
         }
 
         * {
@@ -85,6 +87,11 @@
             box-shadow: 0 2px 10px var(--shadow);
             z-index: 1000;
             position: relative;
+            transition: transform 0.3s ease;
+        }
+
+        .header.fullscreen-hidden {
+            transform: translateY(-100%);
         }
 
         .header-content {
@@ -104,6 +111,8 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex: 1;
+            min-width: 200px;
         }
 
         .file-input {
@@ -114,7 +123,7 @@
             background: var(--button-bg);
             color: white;
             border: none;
-            padding: 10px 16px;
+            padding: 12px 16px;
             border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
@@ -122,15 +131,21 @@
             transition: all 0.3s ease;
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
             min-height: 44px;
             text-decoration: none;
+            white-space: nowrap;
         }
 
         .btn:hover {
             background: var(--button-hover);
             transform: translateY(-1px);
             box-shadow: 0 4px 15px var(--shadow);
+        }
+
+        .btn:active {
+            transform: translateY(0);
         }
 
         .btn-secondary {
@@ -151,8 +166,8 @@
         }
 
         .btn-icon {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             padding: 8px;
             border-radius: 50%;
             display: flex;
@@ -163,14 +178,14 @@
         .controls {
             display: flex;
             align-items: center;
-            gap: 15px;
-            margin-left: auto;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
         .font-controls {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             padding: 8px 12px;
             border: 1px solid var(--border-color);
             border-radius: 8px;
@@ -179,18 +194,101 @@
 
         .font-size-display {
             font-weight: 600;
-            min-width: 50px;
+            min-width: 45px;
             text-align: center;
-            font-size: 14px;
+            font-size: 12px;
         }
 
         .file-name {
             font-weight: 600;
             color: var(--text-primary);
-            max-width: 200px;
+            max-width: 150px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            font-size: 13px;
+        }
+
+        /* Floating Controls for Fullscreen */
+        .floating-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--overlay-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 50px;
+            padding: 8px;
+            display: none;
+            flex-direction: row;
+            gap: 8px;
+            z-index: 1002;
+            box-shadow: 0 8px 32px var(--shadow-lg);
+            transition: all 0.3s ease;
+        }
+
+        .floating-controls.show {
+            display: flex;
+        }
+
+        .floating-controls .btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            min-width: 44px;
+            min-height: 44px;
+            border-radius: 50%;
+            padding: 8px;
+        }
+
+        .floating-controls .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        /* Quick Access Panel */
+        .quick-panel {
+            position: fixed;
+            top: 50%;
+            left: -300px;
+            transform: translateY(-50%);
+            width: 280px;
+            max-height: 80vh;
+            background: var(--overlay-bg);
+            backdrop-filter: blur(15px);
+            border-radius: 0 15px 15px 0;
+            padding: 20px;
+            z-index: 1003;
+            transition: left 0.3s ease;
+            overflow-y: auto;
+            box-shadow: 5px 0 25px var(--shadow-lg);
+        }
+
+        .quick-panel.show {
+            left: 0;
+        }
+
+        .quick-panel h3 {
+            color: white;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .quick-panel .control-group {
+            margin-bottom: 15px;
+        }
+
+        .quick-panel label {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 12px;
+            font-weight: 500;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .quick-panel .btn {
+            width: 100%;
+            margin-bottom: 8px;
+            justify-content: flex-start;
         }
 
         /* TTS Controls */
@@ -198,7 +296,7 @@
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 20px;
+            padding: 15px;
             margin-top: 15px;
             box-shadow: 0 4px 15px var(--shadow);
         }
@@ -211,8 +309,8 @@
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 15px;
-            margin-bottom: 15px;
+            gap: 10px;
+            margin-bottom: 12px;
         }
 
         .tts-row:last-child {
@@ -223,16 +321,19 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-wrap: wrap;
         }
 
         .slider-container {
             display: flex;
             align-items: center;
             gap: 8px;
+            min-width: 120px;
         }
 
         .slider {
-            width: 80px;
+            flex: 1;
+            min-width: 60px;
             height: 6px;
             border-radius: 3px;
             background: var(--border-color);
@@ -243,8 +344,8 @@
 
         .slider::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             background: var(--button-bg);
             cursor: pointer;
@@ -253,8 +354,8 @@
         }
 
         .slider::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             background: var(--button-bg);
             cursor: pointer;
@@ -269,8 +370,9 @@
             padding: 8px 12px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
-            min-width: 150px;
+            font-size: 13px;
+            min-width: 120px;
+            max-width: 200px;
         }
 
         .selected-text-preview {
@@ -279,7 +381,7 @@
             border-radius: 8px;
             padding: 12px;
             margin-top: 15px;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         /* Main Content */
@@ -288,6 +390,12 @@
             display: flex;
             flex-direction: column;
             position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .main-content.fullscreen {
+            min-height: 100vh;
+            padding-top: 0;
         }
 
         .upload-area {
@@ -320,6 +428,7 @@
             text-align: center;
             font-size: 18px;
             color: var(--text-secondary);
+            padding: 20px;
         }
 
         .upload-icon {
@@ -338,6 +447,14 @@
             display: none;
             position: relative;
             max-height: calc(100vh - 250px);
+            transition: all 0.3s ease;
+        }
+
+        .reader-container.fullscreen {
+            margin: 0;
+            border-radius: 0;
+            max-height: 100vh;
+            height: 100vh;
         }
 
         .reader-content {
@@ -349,7 +466,13 @@
             font-size: 16px;
             text-align: justify;
             word-wrap: break-word;
-            transition: font-size 0.3s ease;
+            transition: all 0.3s ease;
+            min-height: 100%;
+        }
+
+        .reader-content.fullscreen {
+            padding: 30px 40px;
+            padding-bottom: 100px;
         }
 
         .reader-content h1,
@@ -398,6 +521,21 @@
             font-size: 16px;
             color: var(--text-secondary);
             padding: 0 60px;
+            transition: all 0.3s ease;
+        }
+
+        .page-info.fullscreen {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--overlay-bg);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 1001;
+            backdrop-filter: blur(10px);
         }
 
         .error-message {
@@ -408,6 +546,8 @@
             margin: 20px;
             text-align: center;
             animation: fadeIn 0.5s ease;
+            z-index: 1004;
+            position: relative;
         }
 
         @keyframes fadeIn {
@@ -439,156 +579,6 @@
             background: var(--button-bg);
         }
 
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .header {
-                padding: 10px 15px;
-            }
-
-            .header-content {
-                gap: 10px;
-            }
-
-            .header-row {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .controls {
-                margin-left: 0;
-                justify-content: center;
-                flex-wrap: wrap;
-            }
-
-            .font-controls {
-                justify-content: center;
-            }
-
-            .reader-content {
-                padding: 20px 30px;
-                font-size: 14px;
-            }
-
-            .upload-text {
-                font-size: 16px;
-            }
-
-            .upload-icon {
-                font-size: 36px;
-            }
-
-            .tts-row {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 10px;
-            }
-
-            .control-group {
-                justify-content: space-between;
-            }
-
-            .slider-container {
-                justify-content: space-between;
-            }
-
-            .slider {
-                flex: 1;
-                max-width: 120px;
-            }
-        }
-
-        @media (max-width: 640px) {
-            .reader-content {
-                padding: 15px 20px;
-                text-indent: 0.5em;
-            }
-
-            .page-info {
-                padding: 0 20px;
-            }
-
-            .btn {
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-
-            .font-size-display {
-                min-width: 40px;
-                font-size: 12px;
-            }
-        }
-
-        /* Landscape orientation on mobile */
-        @media screen and (max-height: 500px) and (orientation: landscape) {
-            .header {
-                padding: 8px 15px;
-            }
-
-            .upload-area {
-                min-height: 200px;
-                margin: 10px;
-            }
-
-            .upload-icon {
-                font-size: 24px;
-                margin-bottom: 10px;
-            }
-
-            .upload-text {
-                font-size: 14px;
-            }
-
-            .reader-container {
-                margin: 10px;
-                max-height: calc(100vh - 180px);
-            }
-
-            .reader-content {
-                padding: 20px 30px;
-            }
-
-            .tts-controls {
-                padding: 15px;
-            }
-        }
-
-        /* Touch devices optimization */
-        @media (hover: none) and (pointer: coarse) {
-            .btn {
-                min-height: 44px;
-                min-width: 44px;
-            }
-
-            .btn-icon {
-                width: 44px;
-                height: 44px;
-            }
-
-            .slider::-webkit-slider-thumb {
-                width: 24px;
-                height: 24px;
-            }
-        }
-
-        /* Very small screens */
-        @media (max-width: 320px) {
-            .reader-content {
-                padding: 10px 15px;
-            }
-
-            .tts-controls {
-                padding: 10px;
-            }
-
-            .header {
-                padding: 8px 10px;
-            }
-
-            .upload-area {
-                margin: 10px;
-            }
-        }
-
         /* Status indicators */
         .status-indicator {
             display: inline-block;
@@ -616,6 +606,291 @@
             50% { opacity: 0.5; }
         }
 
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header {
+                padding: 12px 15px;
+            }
+
+            .header-content {
+                gap: 12px;
+            }
+
+            .header-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+
+            .upload-container {
+                min-width: auto;
+            }
+
+            .controls {
+                justify-content: center;
+                gap: 8px;
+            }
+
+            .font-controls {
+                justify-content: center;
+                gap: 6px;
+                padding: 6px 10px;
+            }
+
+            .btn {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+
+            .btn-small {
+                padding: 6px 10px;
+                font-size: 11px;
+                min-height: 32px;
+            }
+
+            .reader-content {
+                padding: 25px 20px;
+                font-size: 15px;
+                line-height: 1.7;
+            }
+
+            .reader-content.fullscreen {
+                padding: 20px 15px;
+                padding-bottom: 80px;
+                font-size: 16px;
+            }
+
+            .upload-text {
+                font-size: 16px;
+                padding: 15px;
+            }
+
+            .upload-icon {
+                font-size: 36px;
+            }
+
+            .upload-area {
+                margin: 15px;
+                min-height: 250px;
+            }
+
+            .reader-container {
+                margin: 15px;
+                max-height: calc(100vh - 220px);
+            }
+
+            .tts-controls {
+                padding: 12px;
+            }
+
+            .tts-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            .control-group {
+                justify-content: space-between;
+                flex-wrap: nowrap;
+            }
+
+            .slider-container {
+                justify-content: space-between;
+                min-width: auto;
+            }
+
+            .slider {
+                min-width: 80px;
+            }
+
+            .select {
+                min-width: 100px;
+                font-size: 12px;
+            }
+
+            .floating-controls {
+                bottom: 15px;
+                right: 15px;
+                flex-direction: column;
+                padding: 6px;
+            }
+
+            .quick-panel {
+                width: 260px;
+                padding: 15px;
+            }
+
+            .page-info {
+                padding: 0 20px;
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .header {
+                padding: 10px 12px;
+            }
+
+            .reader-content {
+                padding: 20px 15px;
+                font-size: 14px;
+                text-indent: 0.8em;
+            }
+
+            .reader-content.fullscreen {
+                padding: 15px 12px;
+                padding-bottom: 70px;
+                font-size: 15px;
+            }
+
+            .page-info {
+                padding: 0 15px;
+                font-size: 13px;
+            }
+
+            .btn {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+
+            .font-size-display {
+                min-width: 35px;
+                font-size: 11px;
+            }
+
+            .file-name {
+                max-width: 120px;
+                font-size: 12px;
+            }
+
+            .upload-area {
+                margin: 12px;
+                min-height: 200px;
+            }
+
+            .reader-container {
+                margin: 12px;
+            }
+
+            .floating-controls {
+                bottom: 12px;
+                right: 12px;
+            }
+
+            .quick-panel {
+                width: 240px;
+                padding: 12px;
+            }
+        }
+
+        /* Landscape orientation on mobile */
+        @media screen and (max-height: 500px) and (orientation: landscape) {
+            .header {
+                padding: 6px 12px;
+            }
+
+            .header-content {
+                gap: 8px;
+            }
+
+            .upload-area {
+                min-height: 150px;
+                margin: 8px;
+            }
+
+            .upload-icon {
+                font-size: 24px;
+                margin-bottom: 8px;
+            }
+
+            .upload-text {
+                font-size: 14px;
+                padding: 10px;
+            }
+
+            .reader-container {
+                margin: 8px;
+                max-height: calc(100vh - 140px);
+            }
+
+            .reader-content {
+                padding: 15px 20px;
+                line-height: 1.6;
+            }
+
+            .reader-content.fullscreen {
+                padding: 10px 15px;
+                padding-bottom: 60px;
+            }
+
+            .tts-controls {
+                padding: 10px;
+            }
+
+            .floating-controls {
+                bottom: 8px;
+                right: 8px;
+                padding: 4px;
+            }
+
+            .floating-controls .btn {
+                min-width: 36px;
+                min-height: 36px;
+            }
+        }
+
+        /* Touch devices optimization */
+        @media (hover: none) and (pointer: coarse) {
+            .btn {
+                min-height: 44px;
+                min-width: 44px;
+            }
+
+            .btn-icon {
+                width: 44px;
+                height: 44px;
+            }
+
+            .slider::-webkit-slider-thumb {
+                width: 24px;
+                height: 24px;
+            }
+
+            .floating-controls .btn {
+                min-width: 48px;
+                min-height: 48px;
+            }
+        }
+
+        /* Very small screens */
+        @media (max-width: 320px) {
+            .reader-content {
+                padding: 15px 10px;
+            }
+
+            .reader-content.fullscreen {
+                padding: 10px 8px;
+                padding-bottom: 60px;
+            }
+
+            .tts-controls {
+                padding: 8px;
+            }
+
+            .header {
+                padding: 8px 8px;
+            }
+
+            .upload-area {
+                margin: 8px;
+            }
+
+            .quick-panel {
+                width: 220px;
+                padding: 10px;
+            }
+        }
+
         /* Utility classes */
         .hidden {
             display: none !important;
@@ -640,12 +915,52 @@
         .mb-2 {
             margin-bottom: 8px;
         }
+
+        /* Fullscreen specific styles */
+        .fullscreen-mode .header {
+            transform: translateY(-100%);
+        }
+
+        .fullscreen-mode .main-content {
+            min-height: 100vh;
+        }
+
+        .fullscreen-mode .reader-container {
+            margin: 0;
+            border-radius: 0;
+            max-height: 100vh;
+            height: 100vh;
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* High contrast mode */
+        @media (prefers-contrast: high) {
+            :root {
+                --border-color: #000000;
+                --button-bg: #0000ff;
+                --text-primary: #000000;
+            }
+
+            [data-theme="dark"] {
+                --border-color: #ffffff;
+                --button-bg: #00ffff;
+                --text-primary: #ffffff;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="reading-progress" id="readingProgress"></div>
     
-    <div class="header">
+    <div class="header" id="header">
         <div class="header-content">
             <div class="header-row">
                 <div class="upload-container">
@@ -658,12 +973,12 @@
 
                 <div class="controls">
                     <div class="font-controls">
-                        <button class="btn btn-secondary btn-small" onclick="decreaseFontSize()">A-</button>
+                        <button class="btn btn-secondary btn-small" onclick="decreaseFontSize()" title="Diminuir fonte">A-</button>
                         <span class="font-size-display" id="fontSizeDisplay">16px</span>
-                        <button class="btn btn-secondary btn-small" onclick="increaseFontSize()">A+</button>
+                        <button class="btn btn-secondary btn-small" onclick="increaseFontSize()" title="Aumentar fonte">A+</button>
                     </div>
 
-                    <select id="fontFamilySelect" class="select" onchange="changeFontFamily()">
+                    <select id="fontFamilySelect" class="select" onchange="changeFontFamily()" title="Família da fonte">
                         <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
                         <option value="'Times New Roman', Times, serif">Times New Roman</option>
                         <option value="'Arial', Helvetica, sans-serif">Arial</option>
@@ -671,10 +986,10 @@
                         <option value="'Courier New', Courier, monospace">Courier New</option>
                     </select>
 
-                    <button class="btn btn-secondary btn-small" onclick="resetFontSize()">🔄 Reset</button>
-                    <button class="btn btn-secondary btn-small" onclick="toggleFullscreen()" id="fullscreenBtn">🔳 Tela Cheia</button>
-                    <button class="btn btn-secondary btn-icon" onclick="toggleTheme()" id="themeToggle">🌙</button>
-                    <button class="btn btn-secondary btn-icon" onclick="toggleTTSControls()" id="ttsToggle" style="display: none;">🔊</button>
+                    <button class="btn btn-secondary btn-small" onclick="resetFontSize()" title="Resetar fonte">🔄</button>
+                    <button class="btn btn-secondary btn-small" onclick="toggleFullscreen()" id="fullscreenBtn" title="Tela cheia">🔳</button>
+                    <button class="btn btn-secondary btn-icon" onclick="toggleTheme()" id="themeToggle" title="Alternar tema">🌙</button>
+                    <button class="btn btn-secondary btn-icon" onclick="toggleTTSControls()" id="ttsToggle" style="display: none;" title="Controles de voz">🔊</button>
                 </div>
             </div>
 
@@ -723,7 +1038,58 @@
         </div>
     </div>
 
-    <div class="main-content">
+    <!-- Floating Controls for Fullscreen -->
+    <div class="floating-controls" id="floatingControls">
+        <button class="btn" onclick="toggleQuickPanel()" title="Painel rápido">⚙️</button>
+        <button class="btn" onclick="toggleReading()" id="floatingPlayBtn" title="Play/Pause">▶️</button>
+        <button class="btn" onclick="exitFullscreen()" title="Sair da tela cheia">❌</button>
+    </div>
+
+    <!-- Quick Access Panel -->
+    <div class="quick-panel" id="quickPanel">
+        <h3>Controles Rápidos</h3>
+        
+        <div class="control-group">
+            <button class="btn" onclick="toggleReading()">
+                <span id="quickPlayIcon">▶️</span> <span id="quickPlayText">Reproduzir</span>
+            </button>
+            <button class="btn btn-secondary" onclick="stopReading()">⏹️ Parar</button>
+        </div>
+
+        <div class="control-group">
+            <label>Fonte</label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn btn-secondary" onclick="decreaseFontSize()" style="width: 40px;">A-</button>
+                <span id="quickFontSize" style="color: white; min-width: 40px; text-align: center;">16px</span>
+                <button class="btn btn-secondary" onclick="increaseFontSize()" style="width: 40px;">A+</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label for="quickVoiceSelect">Voz</label>
+            <select id="quickVoiceSelect" class="select" onchange="changeVoiceFromQuick()" style="width: 100%;">
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="quickRateSlider">Velocidade: <span id="quickRateValue">1.0</span></label>
+            <input type="range" id="quickRateSlider" class="slider" min="0.5" max="2" step="0.1" value="1" onchange="updateRateFromQuick()" style="width: 100%;">
+        </div>
+
+        <div class="control-group">
+            <label for="quickVolumeSlider">Volume: <span id="quickVolumeValue">100%</span></label>
+            <input type="range" id="quickVolumeSlider" class="slider" min="0" max="1" step="0.1" value="1" onchange="updateVolumeFromQuick()" style="width: 100%;">
+        </div>
+
+        <div class="control-group">
+            <button class="btn btn-secondary" onclick="toggleTheme()">
+                <span id="quickThemeIcon">🌙</span> Alternar Tema
+            </button>
+            <button class="btn btn-secondary" onclick="resetFontSize()">🔄 Reset Fonte</button>
+        </div>
+    </div>
+
+    <div class="main-content" id="mainContent">
         <div class="upload-area" id="uploadArea">
             <div class="upload-text">
                 <div class="upload-icon">📄</div>
@@ -757,6 +1123,8 @@
         let isPaused = false;
         let currentUtterance = null;
         let availableVoices = [];
+        let isFullscreenMode = false;
+        let quickPanelOpen = false;
 
         // Configurações TTS
         let ttsSettings = {
@@ -776,6 +1144,8 @@
         const fileName = document.getElementById('fileName');
         const fontSizeDisplay = document.getElementById('fontSizeDisplay');
         const readingProgress = document.getElementById('readingProgress');
+        const header = document.getElementById('header');
+        const mainContent = document.getElementById('mainContent');
         const ttsControls = document.getElementById('ttsControls');
         const ttsToggle = document.getElementById('ttsToggle');
         const playPauseBtn = document.getElementById('playPauseBtn');
@@ -790,6 +1160,20 @@
         const readSelectionBtn = document.getElementById('readSelectionBtn');
         const themeToggle = document.getElementById('themeToggle');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const floatingControls = document.getElementById('floatingControls');
+        const quickPanel = document.getElementById('quickPanel');
+        const floatingPlayBtn = document.getElementById('floatingPlayBtn');
+
+        // Quick panel elements
+        const quickFontSize = document.getElementById('quickFontSize');
+        const quickVoiceSelect = document.getElementById('quickVoiceSelect');
+        const quickRateSlider = document.getElementById('quickRateSlider');
+        const quickVolumeSlider = document.getElementById('quickVolumeSlider');
+        const quickRateValue = document.getElementById('quickRateValue');
+        const quickVolumeValue = document.getElementById('quickVolumeValue');
+        const quickPlayIcon = document.getElementById('quickPlayIcon');
+        const quickPlayText = document.getElementById('quickPlayText');
+        const quickThemeIcon = document.getElementById('quickThemeIcon');
 
         // Event listeners
         fileInput.addEventListener('change', handleFileSelect);
@@ -802,10 +1186,41 @@
         document.addEventListener('keydown', handleKeyboardShortcuts);
         document.addEventListener('fullscreenchange', handleFullscreenChange);
 
+        // Touch events for mobile
+        let touchStartY = 0;
+        let touchEndY = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartY = e.changedTouches[0].screenY;
+        });
+
+        document.addEventListener('touchend', (e) => {
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipe();
+        });
+
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            const diff = touchStartY - touchEndY;
+
+            if (isFullscreenMode && Math.abs(diff) > swipeThreshold) {
+                if (diff > 0) {
+                    // Swipe up - show floating controls
+                    floatingControls.classList.add('show');
+                    setTimeout(() => {
+                        if (!quickPanelOpen) {
+                            floatingControls.classList.remove('show');
+                        }
+                    }, 3000);
+                }
+            }
+        }
+
         // Carregar vozes
         function loadVoices() {
             availableVoices = speechSynthesis.getVoices();
             populateVoiceSelect();
+            populateQuickVoiceSelect();
             
             // Selecionar voz em português por padrão
             const portugueseVoice = availableVoices.find(voice => 
@@ -814,6 +1229,7 @@
             if (portugueseVoice && !ttsSettings.voice) {
                 ttsSettings.voice = portugueseVoice.name;
                 voiceSelect.value = portugueseVoice.name;
+                quickVoiceSelect.value = portugueseVoice.name;
             }
         }
 
@@ -824,6 +1240,16 @@
                 option.value = voice.name;
                 option.textContent = `${voice.name} (${voice.lang})`;
                 voiceSelect.appendChild(option);
+            });
+        }
+
+        function populateQuickVoiceSelect() {
+            quickVoiceSelect.innerHTML = '';
+            availableVoices.forEach(voice => {
+                const option = document.createElement('option');
+                option.value = voice.name;
+                option.textContent = `${voice.name} (${voice.lang})`;
+                quickVoiceSelect.appendChild(option);
             });
         }
 
@@ -964,11 +1390,73 @@
         function updateFontSize() {
             readerContent.style.fontSize = fontSize + 'px';
             fontSizeDisplay.textContent = fontSize + 'px';
+            quickFontSize.textContent = fontSize + 'px';
         }
 
         function changeFontFamily() {
             const fontFamily = document.getElementById('fontFamilySelect').value;
             readerContent.style.fontFamily = fontFamily;
+        }
+
+        // Funções de fullscreen
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                enterFullscreen();
+            } else {
+                exitFullscreen();
+            }
+        }
+
+        function enterFullscreen() {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.error('Erro ao entrar em tela cheia:', err);
+            });
+        }
+
+        function exitFullscreen() {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            }
+        }
+
+        function handleFullscreenChange() {
+            isFullscreenMode = !!document.fullscreenElement;
+            
+            if (isFullscreenMode) {
+                // Entrou em fullscreen
+                document.body.classList.add('fullscreen-mode');
+                header.classList.add('fullscreen-hidden');
+                mainContent.classList.add('fullscreen');
+                readerContainer.classList.add('fullscreen');
+                readerContent.classList.add('fullscreen');
+                pageInfo.classList.add('fullscreen');
+                fullscreenBtn.innerHTML = '🔲 Sair';
+                
+                // Mostrar controles flutuantes
+                floatingControls.classList.add('show');
+                
+                // Esconder controles após 3 segundos
+                setTimeout(() => {
+                    if (!quickPanelOpen) {
+                        floatingControls.classList.remove('show');
+                    }
+                }, 3000);
+                
+            } else {
+                // Saiu do fullscreen
+                document.body.classList.remove('fullscreen-mode');
+                header.classList.remove('fullscreen-hidden');
+                mainContent.classList.remove('fullscreen');
+                readerContainer.classList.remove('fullscreen');
+                readerContent.classList.remove('fullscreen');
+                pageInfo.classList.remove('fullscreen');
+                fullscreenBtn.innerHTML = '🔳 Tela Cheia';
+                
+                // Esconder controles flutuantes
+                floatingControls.classList.remove('show');
+                quickPanel.classList.remove('show');
+                quickPanelOpen = false;
+            }
         }
 
         // Funções TTS
@@ -1073,11 +1561,13 @@
         }
 
         function updatePlayPauseButton() {
-            if (isReading && !isPaused) {
-                playPauseBtn.innerHTML = '⏸️ Pausar';
-            } else {
-                playPauseBtn.innerHTML = '▶️ Reproduzir';
-            }
+            const icon = isReading && !isPaused ? '⏸️' : '▶️';
+            const text = isReading && !isPaused ? 'Pausar' : 'Reproduzir';
+            
+            playPauseBtn.innerHTML = `${icon} ${text}`;
+            floatingPlayBtn.innerHTML = icon;
+            quickPlayIcon.textContent = icon;
+            quickPlayText.textContent = text;
         }
 
         function updateStatusIndicator(status) {
@@ -1094,19 +1584,65 @@
             }
         }
 
+        // Quick Panel Functions
+        function toggleQuickPanel() {
+            quickPanelOpen = !quickPanelOpen;
+            quickPanel.classList.toggle('show');
+            
+            if (quickPanelOpen) {
+                floatingControls.classList.add('show');
+                syncQuickPanelValues();
+            } else if (!isFullscreenMode) {
+                floatingControls.classList.remove('show');
+            }
+        }
+
+        function syncQuickPanelValues() {
+            quickFontSize.textContent = fontSize + 'px';
+            quickVoiceSelect.value = ttsSettings.voice;
+            quickRateSlider.value = ttsSettings.rate;
+            quickVolumeSlider.value = ttsSettings.volume;
+            quickRateValue.textContent = ttsSettings.rate.toFixed(1);
+            quickVolumeValue.textContent = Math.round(ttsSettings.volume * 100) + '%';
+        }
+
+        function changeVoiceFromQuick() {
+            ttsSettings.voice = quickVoiceSelect.value;
+            voiceSelect.value = ttsSettings.voice;
+        }
+
+        function updateRateFromQuick() {
+            ttsSettings.rate = parseFloat(quickRateSlider.value);
+            quickRateValue.textContent = ttsSettings.rate.toFixed(1);
+            rateSlider.value = ttsSettings.rate;
+            rateValue.textContent = ttsSettings.rate.toFixed(1);
+        }
+
+        function updateVolumeFromQuick() {
+            ttsSettings.volume = parseFloat(quickVolumeSlider.value);
+            quickVolumeValue.textContent = Math.round(ttsSettings.volume * 100) + '%';
+            volumeSlider.value = ttsSettings.volume;
+            volumeValue.textContent = Math.round(ttsSettings.volume * 100) + '%';
+        }
+
         // Configurações TTS
         function changeVoice() {
             ttsSettings.voice = voiceSelect.value;
+            quickVoiceSelect.value = ttsSettings.voice;
         }
 
         function updateRate() {
             ttsSettings.rate = parseFloat(rateSlider.value);
             rateValue.textContent = ttsSettings.rate.toFixed(1);
+            quickRateSlider.value = ttsSettings.rate;
+            quickRateValue.textContent = ttsSettings.rate.toFixed(1);
         }
 
         function updateVolume() {
             ttsSettings.volume = parseFloat(volumeSlider.value);
             volumeValue.textContent = Math.round(ttsSettings.volume * 100) + '%';
+            quickVolumeSlider.value = ttsSettings.volume;
+            quickVolumeValue.textContent = Math.round(ttsSettings.volume * 100) + '%';
         }
 
         // Seleção de texto
@@ -1140,25 +1676,9 @@
             const currentTheme = body.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             body.setAttribute('data-theme', newTheme);
-            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
-        }
-
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.error('Erro ao entrar em tela cheia:', err);
-                });
-            } else {
-                document.exitFullscreen();
-            }
-        }
-
-        function handleFullscreenChange() {
-            if (document.fullscreenElement) {
-                fullscreenBtn.innerHTML = '🔲 Sair Tela Cheia';
-            } else {
-                fullscreenBtn.innerHTML = '🔳 Tela Cheia';
-            }
+            const icon = newTheme === 'dark' ? '☀️' : '🌙';
+            themeToggle.textContent = icon;
+            quickThemeIcon.textContent = icon;
         }
 
         function handleKeyboardShortcuts(event) {
@@ -1188,6 +1708,14 @@
                 event.preventDefault();
                 toggleFullscreen();
             }
+
+            if (event.key === 'Escape' && isFullscreenMode) {
+                if (quickPanelOpen) {
+                    toggleQuickPanel();
+                } else {
+                    exitFullscreen();
+                }
+            }
         }
 
         function showError(message) {
@@ -1213,9 +1741,37 @@
             }
         });
 
+        // Fechar quick panel ao clicar fora
+        document.addEventListener('click', (event) => {
+            if (quickPanelOpen && !quickPanel.contains(event.target) && !floatingControls.contains(event.target)) {
+                toggleQuickPanel();
+            }
+        });
+
         // Inicialização
         updateStatusIndicator('stopped');
         updatePlayPauseButton();
+        syncQuickPanelValues();
+
+        // Auto-hide floating controls in fullscreen
+        let hideControlsTimeout;
+        
+        function showFloatingControls() {
+            if (isFullscreenMode) {
+                floatingControls.classList.add('show');
+                clearTimeout(hideControlsTimeout);
+                
+                if (!quickPanelOpen) {
+                    hideControlsTimeout = setTimeout(() => {
+                        floatingControls.classList.remove('show');
+                    }, 3000);
+                }
+            }
+        }
+
+        // Show controls on mouse movement in fullscreen
+        document.addEventListener('mousemove', showFloatingControls);
+        document.addEventListener('touchstart', showFloatingControls);
     </script>
 </body>
 </html>
