@@ -561,6 +561,24 @@
             }
         }
 
+        /* Debug info for mobile */
+        .debug-info {
+            position: fixed;
+            top: 50px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 1005;
+            display: none;
+        }
+
+        .debug-info.show {
+            display: block;
+        }
+
         /* Scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
@@ -960,6 +978,9 @@
 <body>
     <div class="reading-progress" id="readingProgress"></div>
     
+    <!-- Debug Info -->
+    <div class="debug-info" id="debugInfo"></div>
+    
     <div class="header" id="header">
         <div class="header-content">
             <div class="header-row">
@@ -1041,7 +1062,7 @@
     <!-- Floating Controls for Fullscreen -->
     <div class="floating-controls" id="floatingControls">
         <button class="btn" onclick="toggleQuickPanel()" title="Painel rápido">⚙️</button>
-        <button class="btn" onclick="toggleReading()" id="floatingPlayBtn" title="Play/Pause">▶️</button>
+        <button class="btn" onclick="handleFloatingPlayClick()" id="floatingPlayBtn" title="Play/Pause">▶️</button>
         <button class="btn" onclick="exitFullscreen()" title="Sair da tela cheia">❌</button>
     </div>
 
@@ -1050,7 +1071,7 @@
         <h3>Controles Rápidos</h3>
         
         <div class="control-group">
-            <button class="btn" onclick="toggleReading()">
+            <button class="btn" onclick="handleQuickPlayClick()">
                 <span id="quickPlayIcon">▶️</span> <span id="quickPlayText">Reproduzir</span>
             </button>
             <button class="btn btn-secondary" onclick="stopReading()">⏹️ Parar</button>
@@ -1086,6 +1107,10 @@
                 <span id="quickThemeIcon">🌙</span> Alternar Tema
             </button>
             <button class="btn btn-secondary" onclick="resetFontSize()">🔄 Reset Fonte</button>
+        </div>
+
+        <div class="control-group">
+            <button class="btn btn-secondary" onclick="toggleDebugInfo()">🐛 Debug Info</button>
         </div>
     </div>
 
@@ -1125,6 +1150,9 @@
         let availableVoices = [];
         let isFullscreenMode = false;
         let quickPanelOpen = false;
+        let speechSynthesisReady = false;
+        let userInteracted = false;
+        let debugMode = false;
 
         // Configurações TTS
         let ttsSettings = {
@@ -1163,6 +1191,7 @@
         const floatingControls = document.getElementById('floatingControls');
         const quickPanel = document.getElementById('quickPanel');
         const floatingPlayBtn = document.getElementById('floatingPlayBtn');
+        const debugInfo = document.getElementById('debugInfo');
 
         // Quick panel elements
         const quickFontSize = document.getElementById('quickFontSize');
@@ -1174,6 +1203,55 @@
         const quickPlayIcon = document.getElementById('quickPlayIcon');
         const quickPlayText = document.getElementById('quickPlayText');
         const quickThemeIcon = document.getElementById('quickThemeIcon');
+
+        // Debug function
+        function updateDebugInfo() {
+            if (!debugMode) return;
+            
+            const info = {
+                isFullscreen: isFullscreenMode,
+                isReading: isReading,
+                isPaused: isPaused,
+                speechSynthesisReady: speechSynthesisReady,
+                userInteracted: userInteracted,
+                voicesCount: availableVoices.length,
+                currentVoice: ttsSettings.voice,
+                speechSynthesisState: {
+                    speaking: speechSynthesis.speaking,
+                    pending: speechSynthesis.pending,
+                    paused: speechSynthesis.paused
+                },
+                extractedTextLength: extractedText.length,
+                selectedTextLength: selectedText.length
+            };
+            
+            debugInfo.innerHTML = Object.entries(info)
+                .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+                .join('<br>');
+        }
+
+        function toggleDebugInfo() {
+            debugMode = !debugMode;
+            debugInfo.classList.toggle('show', debugMode);
+            if (debugMode) {
+                updateDebugInfo();
+                setInterval(updateDebugInfo, 1000);
+            }
+        }
+
+        // Detectar interação do usuário
+        function markUserInteraction() {
+            if (!userInteracted) {
+                userInteracted = true;
+                updateDebugInfo();
+                console.log('User interaction detected');
+            }
+        }
+
+        // Event listeners para detectar interação
+        ['click', 'touchstart', 'keydown'].forEach(event => {
+            document.addEventListener(event, markUserInteraction, { once: true });
+        });
 
         // Event listeners
         fileInput.addEventListener('change', handleFileSelect);
@@ -1192,6 +1270,7 @@
 
         document.addEventListener('touchstart', (e) => {
             touchStartY = e.changedTouches[0].screenY;
+            markUserInteraction();
         });
 
         document.addEventListener('touchend', (e) => {
@@ -1216,20 +1295,39 @@
             }
         }
 
-        // Carregar vozes
+        // Carregar vozes com retry
         function loadVoices() {
-            availableVoices = speechSynthesis.getVoices();
-            populateVoiceSelect();
-            populateQuickVoiceSelect();
+            const voices = speechSynthesis.getVoices();
             
-            // Selecionar voz em português por padrão
-            const portugueseVoice = availableVoices.find(voice => 
-                voice.lang.includes('pt') || voice.lang.includes('PT')
-            );
-            if (portugueseVoice && !ttsSettings.voice) {
-                ttsSettings.voice = portugueseVoice.name;
-                voiceSelect.value = portugueseVoice.name;
-                quickVoiceSelect.value = portugueseVoice.name;
+            if (voices.length > 0) {
+                availableVoices = voices;
+                speechSynthesisReady = true;
+                populateVoiceSelect();
+                populateQuickVoiceSelect();
+                
+                // Selecionar voz em português por padrão
+                if (!ttsSettings.voice) {
+                    const portugueseVoice = availableVoices.find(voice => 
+                        voice.lang.includes('pt') || voice.lang.includes('PT')
+                    );
+                    
+                    if (portugueseVoice) {
+                        ttsSettings.voice = portugueseVoice.name;
+                        voiceSelect.value = portugueseVoice.name;
+                        quickVoiceSelect.value = portugueseVoice.name;
+                    } else if (availableVoices.length > 0) {
+                        // Fallback para primeira voz disponível
+                        ttsSettings.voice = availableVoices[0].name;
+                        voiceSelect.value = availableVoices[0].name;
+                        quickVoiceSelect.value = availableVoices[0].name;
+                    }
+                }
+                
+                updateDebugInfo();
+                console.log(`Loaded ${voices.length} voices, ready: ${speechSynthesisReady}`);
+            } else {
+                // Retry after a short delay
+                setTimeout(loadVoices, 100);
             }
         }
 
@@ -1255,9 +1353,17 @@
 
         // Carregar vozes quando disponíveis
         speechSynthesis.addEventListener('voiceschanged', loadVoices);
+        
+        // Tentar carregar vozes imediatamente
         loadVoices();
 
+        // Retry loading voices after page load
+        window.addEventListener('load', () => {
+            setTimeout(loadVoices, 500);
+        });
+
         function handleFileSelect(event) {
+            markUserInteraction();
             const file = event.target.files[0];
             if (file && file.type === 'application/pdf') {
                 loadPDF(file);
@@ -1273,6 +1379,7 @@
 
         function handleDrop(event) {
             event.preventDefault();
+            markUserInteraction();
             uploadArea.classList.remove('dragover');
             const files = event.dataTransfer.files;
             if (files.length > 0 && files[0].type === 'application/pdf') {
@@ -1299,6 +1406,7 @@
                 pageInfo.textContent = `Texto extraído de ${pdfDoc.numPages} páginas`;
                 ttsToggle.style.display = 'block';
                 updateStatusIndicator('stopped');
+                updateDebugInfo();
             } catch (error) {
                 console.error('Erro ao carregar PDF:', error);
                 showError('Erro ao carregar o arquivo PDF. Verifique se o arquivo não está corrompido.');
@@ -1365,6 +1473,7 @@
             });
 
             readerContent.innerHTML = htmlContent || '<p>Não foi possível extrair texto legível deste PDF.</p>';
+            updateDebugInfo();
         }
 
         // Funções de controle de fonte
@@ -1400,6 +1509,7 @@
 
         // Funções de fullscreen
         function toggleFullscreen() {
+            markUserInteraction();
             if (!document.fullscreenElement) {
                 enterFullscreen();
             } else {
@@ -1457,16 +1567,46 @@
                 quickPanel.classList.remove('show');
                 quickPanelOpen = false;
             }
+            
+            updateDebugInfo();
         }
 
-        // Funções TTS
+        // Funções TTS melhoradas
         function toggleTTSControls() {
             ttsControls.classList.toggle('hidden');
         }
 
-        function startReading(text) {
+        function ensureSpeechSynthesisReady() {
+            return new Promise((resolve) => {
+                if (speechSynthesisReady && availableVoices.length > 0) {
+                    resolve(true);
+                    return;
+                }
+                
+                // Tentar carregar vozes novamente
+                loadVoices();
+                
+                // Aguardar um pouco e tentar novamente
+                setTimeout(() => {
+                    if (speechSynthesisReady && availableVoices.length > 0) {
+                        resolve(true);
+                    } else {
+                        resolve(false);
+                    }
+                }, 500);
+            });
+        }
+
+        async function startReading(text) {
+            markUserInteraction();
+            
             if (!('speechSynthesis' in window)) {
                 showError('Seu navegador não suporta síntese de voz.');
+                return;
+            }
+
+            if (!userInteracted) {
+                showError('Clique em qualquer lugar da tela primeiro para ativar o áudio.');
                 return;
             }
 
@@ -1476,61 +1616,112 @@
                 return;
             }
 
-            stopReading();
-
-            currentUtterance = new SpeechSynthesisUtterance(textToRead);
-            
-            // Configurar voz
-            const selectedVoice = availableVoices.find(voice => voice.name === ttsSettings.voice);
-            if (selectedVoice) {
-                currentUtterance.voice = selectedVoice;
+            // Garantir que o speech synthesis está pronto
+            const ready = await ensureSpeechSynthesisReady();
+            if (!ready) {
+                showError('Sistema de voz não está pronto. Tente novamente em alguns segundos.');
+                return;
             }
 
-            currentUtterance.rate = ttsSettings.rate;
-            currentUtterance.pitch = ttsSettings.pitch;
-            currentUtterance.volume = ttsSettings.volume;
+            // Parar qualquer reprodução anterior
+            stopReading();
 
-            currentUtterance.onstart = () => {
-                isReading = true;
-                isPaused = false;
-                updatePlayPauseButton();
-                updateStatusIndicator('reading');
-            };
+            try {
+                currentUtterance = new SpeechSynthesisUtterance(textToRead);
+                
+                // Configurar voz
+                const selectedVoice = availableVoices.find(voice => voice.name === ttsSettings.voice);
+                if (selectedVoice) {
+                    currentUtterance.voice = selectedVoice;
+                    console.log('Using voice:', selectedVoice.name);
+                } else {
+                    console.log('Voice not found, using default');
+                }
 
-            currentUtterance.onend = () => {
+                currentUtterance.rate = ttsSettings.rate;
+                currentUtterance.pitch = ttsSettings.pitch;
+                currentUtterance.volume = ttsSettings.volume;
+
+                currentUtterance.onstart = () => {
+                    console.log('Speech started');
+                    isReading = true;
+                    isPaused = false;
+                    updatePlayPauseButton();
+                    updateStatusIndicator('reading');
+                    updateDebugInfo();
+                };
+
+                currentUtterance.onend = () => {
+                    console.log('Speech ended');
+                    isReading = false;
+                    isPaused = false;
+                    updatePlayPauseButton();
+                    updateStatusIndicator('stopped');
+                    updateDebugInfo();
+                };
+
+                currentUtterance.onerror = (event) => {
+                    console.error('Speech error:', event);
+                    showError(`Erro na síntese de voz: ${event.error}`);
+                    isReading = false;
+                    isPaused = false;
+                    updatePlayPauseButton();
+                    updateStatusIndicator('stopped');
+                    updateDebugInfo();
+                };
+
+                currentUtterance.onpause = () => {
+                    console.log('Speech paused');
+                    isPaused = true;
+                    updatePlayPauseButton();
+                    updateStatusIndicator('paused');
+                    updateDebugInfo();
+                };
+
+                currentUtterance.onresume = () => {
+                    console.log('Speech resumed');
+                    isPaused = false;
+                    updatePlayPauseButton();
+                    updateStatusIndicator('reading');
+                    updateDebugInfo();
+                };
+
+                console.log('Starting speech synthesis...');
+                speechSynthesis.speak(currentUtterance);
+                
+                // Verificar se realmente começou
+                setTimeout(() => {
+                    if (!speechSynthesis.speaking && !speechSynthesis.pending) {
+                        console.error('Speech synthesis failed to start');
+                        showError('Falha ao iniciar a síntese de voz. Tente novamente.');
+                        isReading = false;
+                        updatePlayPauseButton();
+                        updateStatusIndicator('stopped');
+                    }
+                    updateDebugInfo();
+                }, 100);
+                
+            } catch (error) {
+                console.error('Error starting speech:', error);
+                showError('Erro ao iniciar a reprodução de áudio.');
                 isReading = false;
-                isPaused = false;
                 updatePlayPauseButton();
                 updateStatusIndicator('stopped');
-            };
-
-            currentUtterance.onerror = (event) => {
-                console.error('Erro na síntese de voz:', event);
-                showError('Erro ao reproduzir áudio. Verifique se o navegador suporta síntese de voz.');
-                isReading = false;
-                isPaused = false;
-                updatePlayPauseButton();
-                updateStatusIndicator('stopped');
-            };
-
-            speechSynthesis.speak(currentUtterance);
+                updateDebugInfo();
+            }
         }
 
         function pauseReading() {
             if (speechSynthesis.speaking && !speechSynthesis.paused) {
                 speechSynthesis.pause();
-                isPaused = true;
-                updatePlayPauseButton();
-                updateStatusIndicator('paused');
+                // O evento onpause vai atualizar o estado
             }
         }
 
         function resumeReading() {
             if (speechSynthesis.paused) {
                 speechSynthesis.resume();
-                isPaused = false;
-                updatePlayPauseButton();
-                updateStatusIndicator('reading');
+                // O evento onresume vai atualizar o estado
             }
         }
 
@@ -1540,9 +1731,11 @@
             isPaused = false;
             updatePlayPauseButton();
             updateStatusIndicator('stopped');
+            updateDebugInfo();
         }
 
         function toggleReading() {
+            markUserInteraction();
             if (isReading) {
                 if (isPaused) {
                     resumeReading();
@@ -1552,6 +1745,17 @@
             } else {
                 startReading();
             }
+        }
+
+        // Handlers específicos para controles flutuantes
+        function handleFloatingPlayClick() {
+            markUserInteraction();
+            toggleReading();
+        }
+
+        function handleQuickPlayClick() {
+            markUserInteraction();
+            toggleReading();
         }
 
         function readSelectedText() {
@@ -1609,6 +1813,7 @@
         function changeVoiceFromQuick() {
             ttsSettings.voice = quickVoiceSelect.value;
             voiceSelect.value = ttsSettings.voice;
+            updateDebugInfo();
         }
 
         function updateRateFromQuick() {
@@ -1629,6 +1834,7 @@
         function changeVoice() {
             ttsSettings.voice = voiceSelect.value;
             quickVoiceSelect.value = ttsSettings.voice;
+            updateDebugInfo();
         }
 
         function updateRate() {
@@ -1660,6 +1866,7 @@
                 selectedTextPreview.classList.add('hidden');
                 readSelectionBtn.style.display = 'none';
             }
+            updateDebugInfo();
         }
 
         // Outras funções
@@ -1772,6 +1979,84 @@
         // Show controls on mouse movement in fullscreen
         document.addEventListener('mousemove', showFloatingControls);
         document.addEventListener('touchstart', showFloatingControls);
+
+        // Forçar carregamento de vozes em dispositivos móveis
+        function forceMobileVoiceLoad() {
+            if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                // Criar uma utterance vazia para forçar o carregamento das vozes
+                const testUtterance = new SpeechSynthesisUtterance('');
+                testUtterance.volume = 0;
+                speechSynthesis.speak(testUtterance);
+                speechSynthesis.cancel();
+                
+                setTimeout(() => {
+                    loadVoices();
+                }, 100);
+            }
+        }
+
+        // Executar após interação do usuário
+        document.addEventListener('click', forceMobileVoiceLoad, { once: true });
+        document.addEventListener('touchstart', forceMobileVoiceLoad, { once: true });
+
+        // Verificação periódica do estado do speech synthesis
+        setInterval(() => {
+            if (isReading && !speechSynthesis.speaking && !speechSynthesis.pending) {
+                console.log('Speech synthesis stopped unexpectedly');
+                isReading = false;
+                isPaused = false;
+                updatePlayPauseButton();
+                updateStatusIndicator('stopped');
+                updateDebugInfo();
+            }
+        }, 1000);
+
+        // Prevenção de sleep em dispositivos móveis durante reprodução
+        let wakeLock = null;
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator && isReading) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Wake lock acquired');
+                } catch (err) {
+                    console.log('Wake lock failed:', err);
+                }
+            }
+        }
+
+        function releaseWakeLock() {
+            if (wakeLock) {
+                wakeLock.release();
+                wakeLock = null;
+                console.log('Wake lock released');
+            }
+        }
+
+        // Aplicar wake lock quando começar a ler
+        const originalStartReading = startReading;
+        startReading = async function(text) {
+            await originalStartReading.call(this, text);
+            if (isReading) {
+                requestWakeLock();
+            }
+        };
+
+        // Liberar wake lock quando parar
+        const originalStopReading = stopReading;
+        stopReading = function() {
+            originalStopReading.call(this);
+            releaseWakeLock();
+        };
+
+        // Liberar wake lock quando a página for escondida
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                releaseWakeLock();
+            } else if (isReading) {
+                requestWakeLock();
+            }
+        });
     </script>
 </body>
 </html>
